@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "concert-clarus",
+  "private_key_id": "9006f31536ca5ba0f79e5b5575534dd56d6fdbd0",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQDMG7Y741uVR3kG\nIvSbLUbHNP5ajOhrTFGMvFlxtN1KilXk66UT9pDCBLJQQYH0rOqaxJOABHu0FoGn\nX+HFp7wLZRrHm3G+v+gdtwK2mBtSgb+fnjEEfzCkDSty6LLRwicyY9TpcXaWoHje\ntAYSIp5DoDGSupWsp/HPxYfpLY1Oge8jg/zFLxFXzvFjqgJowSbW2bw5rQ+eJyEr\n6cKNYeByp7nDyux9E7nqhnN/jWArxrzAJ+a5OpofpTXwZ0Nn2bK8HFR63qIRQeK/\niC5D/X7dJrvSOBYToM3F47uiJrZkZeG9h5RqPh8DZH5JX5vGCrl8pOwPgNp/s74r\nwI/LeU5nAgMBAAECggEACK085/rYT9ZD/NDLmTUphxpnna3Ty4vpA5SWMNFBfwO2\ndw7Va63VpYnRkrvWLHKVXpLwukZ2g8dZJ6ZZ0K86vTlFFCs1gKhj06+N+/knYDCH\n1t9AsjI9/RtaN35Q673XMLsxt+LM6cZUnRMGFwtFsxZCRTyNVFOnYe/BwVXgZe/o\nj6x5BI5p0wT3JY/7anqviwB5oznC6blhWEYnM6QLti+UVg+U72SbkPeVN2vmxFqi\na+0U0dHjhAFy8XTAZGQuDVvgz9DwFHy7KBkfH2xH7rCiF54/+PY+TEChvQPhRehl\n+j0Ubzr+x4mEjgD0Lw/Xcq+mp2cOCR7FRKvmfxYt0QKBgQD+6mk2QAEcrugnz8FI\nKnmpsChbaMHAWb9kku5J7tPuKinYqDIT4G6VfQmo/L8b/WjsIGCdJ8rOI8cHCDkO\nEnvPTzvve1k4BVkn7gQEcfpLJJQcAixKkZPGz8b9zwRcSVALIMInh9IHjcIj7mzE\nnvOAqKe1g6f8wAlb7XEuCCj4RQKBgQDM+flyzr4ASi8uDgQ0OmkeKusGbQAQR4Ch\nzE1Mtz/mrxqXoWS++jql2FbqlFhy1jV/KOvKT/KFyob8eBrtASUPkuyxHAeJhmnF\n89tYRAIomu7O1hRJSIJYJRLRhW6XsLWM3BOm7d5mQCDITBufGX0ru0MbzUxURKUz\nzKEODd1kuwKBgQC4UZBvvInRTpropmzwHF5KFuinZ7Cov3wHYcJQzRKKZAxL7xn+\ni0oKZxXEDbS1rV7fVW3mVG5s7Sus5wIyLaU+OeFxgPP68MsNdymKeUtsZ+977QpP\nhMGggH426SgS/qOU2EPqx2dTNOoKhww4g2I4Rjq1oZOmysg5ow8yJI5TLQKBgQCx\njnA4tUH8+kX4PQgDPf3EtiS0gkMl1upkPZdQNwTRjSkZ5CJjFFstQkO4HByqDUh2\nCDqIG8zXfGKF3HxmhTFXVkxV9xPIW3jQkraUtQSxq9Pls6gK+xZ9yE+O02jDWb1K\ncXFMjoyyQiajmtnqbafx89rkAGh4LqZ0QnPYusXm9QKBgQC80Oao/VxNFN/HAzrv\nO9wfbliVnvdbP//nCeCeXOcF7PcYhw/bHnE3eLxw2an2UXSOuxYmlzC+EYlzvBg6\njLbI69ZgJRQ/mKjVRI4A41WST+Qxzuj3nN3uI52gx6LaUsepd0Q4nqsYjF/3Goqq\n00tFbcLVTXo++d5Bm3iNj2pSWg==\n-----END PRIVATE KEY-----\n",
+  "client_email": "claruscomputereader@concert-clarus.iam.gserviceaccount.com",
+  "client_id": "118273011167324930164",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/claruscomputereader%40concert-clarus.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

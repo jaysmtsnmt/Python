@@ -14,6 +14,9 @@ from colorama import Fore
 import lib_spotify as spotify
 from pvrecorder import PvRecorder
 from lib_stt import recognizer as SST
+from lib_reminders import Reminder as rm
+import datetime
+import lib_timetable as vjc
 
 arduino = serial.Serial(port='COM5', baudrate=9600, timeout=.1)
 
@@ -23,8 +26,11 @@ speech = None
 WAKEWORDPATH1 = r'C:\Users\delay\OneDrive\Documents\Code & Programs\Visual Studio Code\Python\The CT Project\Wakewords\Datafiles\Hey-Cee-Tee_en_windows_v3_0_0.ppn'
 WAKEWORDPATH2 = r"C:\Users\delay\OneDrive\Documents\Code & Programs\Visual Studio Code\Python\The CT Project\Wakewords\Datafiles\yo-cee-tee_en_windows_v3_0_0.ppn"
 MIC_ID = 1
+sleep_to_idle = False
+no_speech_count = 0
 
 #Face Tracking
+CAM_ID = 0
 WIDTH = 1280
 HEIGHT = 720
 VISION_Y = 480
@@ -33,8 +39,8 @@ movement_pix_sens = 64
 detector = dlib.get_frontal_face_detector()
 serial_comm_limit = 0.2
 
-#Reminder
-REMINDERSPATH = r'C:\Users\delay\OneDrive\Documents\Code & Programs\Visual Studio Code\Python\The CT Project\Modules\Reminder\data.txt'
+#timetable
+starting_week_number = 0 #school started on 1st week. 
 
 #Serial
 class Serial:
@@ -144,11 +150,19 @@ def sleep():
     global state
     #print(f"[PYDEBUG] EVENT {wakeEvent.is_set()}")
     if wakeEvent.is_set() == True:
-        #print("[EVENT] wakeEvent Detected")
-        Serial.write("00/awake")
-        wakeEvent.clear()
-        SST.stopRecording.clear()
-        state = "awake"
+        if sleep_to_idle == True:
+            #print("[EVENT] wakeEvent Detected")
+            Serial.write("00/idle")
+            wakeEvent.clear()
+            SST.stopRecording.clear()
+            state = "idle"
+                
+        else: #sleep to awake
+            #print("[EVENT] wakeEvent Detected")
+            Serial.write("00/awake")
+            wakeEvent.clear()
+            SST.stopRecording.clear()
+            state = "awake"
         
 def deepsleep():
     global state
@@ -181,85 +195,40 @@ def textToAction():
     global state
     
     if speech != None and len(speech) > 1:
-        category, sentence, identifiers, neutral_terms = action.process(speech)
-        #if it is a request, category != None
+        category, sentence, identifiers, neutral_terms = action.process(speech)  # #category, sentence, identifiers, neutral_terms
         
-        if category == "reminder":
-            print(Fore.GREEN + f"[TTA] Reminder: {sentence}" + Fore.RESET)
-            for identifier in identifiers:
-                if identifier == "what" or identifier == "view":
-                    with open(REMINDERSPATH, "r") as rfile:
-                        reminders = rfile.readlines()
-                        if reminders[0] != None:
-                            n_reminders = 0
-                            print(Fore.GREEN + "Reminders: " + Fore.RESET)
-                            for reminder in reminders:
-                                n_reminders += 1
-                                print(f"{n_reminders}: {reminder}")
-                    
-                    rfile.close()
-                
-                elif identifier == "add" or identifier == "remind":
-                    with open(REMINDERSPATH, "a") as rfile:
-                        print(Fore.GREEN + f"New Reminder Added: {' '.join(neutral_terms)}" + Fore.RESET)
-                        rfile.write((" ".join(neutral_terms) + "\n"))
-                    
-                    rfile.close()
-                
-                elif identifier == "delete" or identifier == "complete" or identifier == "mark" or identifier == "remove": #not working yet
-                    reminders_dictionary = {}
-                    with open(REMINDERSPATH, "w+") as rfile:
-                        reminders = rfile.readlines()
-                        if reminders[0] != None:
-                            n_reminders = 0
-                            print(Fore.GREEN + "Reminders: " + Fore.RESET)
-                            for reminder in reminders:
-                                n_reminders += 1
-                                reminders_dictionary[n_reminders] = reminder
-                    
-                    rfile.close()
-        
-        elif category == "room":
-            print(Fore.GREEN + f"[TTA] Room: {sentence}" + Fore.RESET)
-        
-        elif category == "music":
-            print(Fore.GREEN + f"[TTA] Music: {sentence}" + Fore.RESET)
-            for identifier in identifiers:
-                if identifier == "turn" or identifier == "play" or identifier == "pause": #toggle
-                    if identifier == "play" or (identifier == "turn" and sentence.find("on") > -1):
+        if category == "music":
+            if len(identifiers) > 0: #if there is magnitude
+                if "play" in identifiers or "unpause" in identifiers or "on" in identifiers:
+                    if len(neutral_terms) > 0:
                         #check neutral_terms
-                        if len(neutral_terms) > 0: #if there are some neutral words
-                            x = 0
-                            song_name = ""
+                        x = 0
+                        song_name = ""
+                        
+                        for term in neutral_terms:
+                            if len(term.split()) > x:
+                                x = len(term.split())
+                                song_name = term
+                        try: 
+                            index = neutral_terms.index("by") + 1
+                            spotify.play(song=song_name, song_artist=neutral_terms[index])
                             
-                            for term in neutral_terms:
-                                if len(term.split()) > x:
-                                    x = len(term.split())
-                                    song_name = term
-                            try: 
-                                index = neutral_terms.index("by") + 1
-                                spotify.play(song=song_name, song_artist=neutral_terms[index])
-                                
-                            except ValueError:
-                                spotify.play(song=song_name)
-                            
-                        else:       
-                            spotify.play()
-                            break
-                            
-                    elif identifier == "pause" or (identifier == "turn" and sentence.find("off") > -1):
-                        spotify.pause()
-                        break             
+                        except ValueError:
+                            spotify.play(song=song_name)
+                        
+                    else:       
+                        spotify.play()
+                        
+                elif "pause" in identifiers or "stop" in identifiers or "off":
+                    spotify.pause()
                     
-                elif identifier == "skip":
+                elif "skip" in identifiers:
                     spotify.skip()
-                    break       
                     
-                elif identifier == "rewind":
+                elif "rewind" in identifiers:
                     spotify.rewind()
-                    break       
-                
-                elif identifier == "add" or "queue":
+                    
+                elif "add" in identifiers or "queue" in identifiers:
                     if len(neutral_terms) > 0: #if there are some neutral words
                         x = 0
                         song_name = ""
@@ -278,38 +247,77 @@ def textToAction():
                 
                 else:
                     print(spotify.currentlyPlaying())
-                    break
-                        
-        elif category == "alarm":            
-            print(Fore.GREEN + f"[TTA] Alarm: {sentence}" + Fore.RESET)
-        
-        elif category == "timer":
-            print(Fore.GREEN + f"[TTA] Timer: {sentence}" + Fore.RESET)
-
-        elif category == "calendar":
-            print(Fore.GREEN + f"[TTA] Calendar: {sentence}" + Fore.RESET)
-        
-        elif category == "log":
-            print(Fore.GREEN + f"[TTA] Log: {sentence}" + Fore.RESET)
-
+                    
         elif category == "command":
-            print(Fore.GREEN + f"[TTA] Command: {sentence}" + Fore.RESET)
-            for identifier in identifiers:
-                if identifier == "eject" or identifier == "phone":
-                    Serial.write("05/eject")
-                    break
-                    
-                elif identifier == "sleep":
-                    state = "sleep"
-                    Serial.write("03/sw/98/10")
-                    Serial.write("00/sleep")
-                    break
-                    
-                elif identifier == "hibernate" or identifier == "hibernation":
-                    state = "deepsleep"
-                    Serial.write("00/deepsleep")
-                    break
-        
+            if "sleep" in identifiers:
+                state="sleep"
+                Serial.write("03/sw/98/10")
+                Serial.write("00/sleep")
+                speech = None
+                
+            elif "hibernate" in identifiers:
+                state="deepsleep"
+                Serial.write("00/deepsleep")
+                speech = None
+                
+            elif "go into rest" in neutral_terms or "rest" in neutral_terms[0]:
+                state="idle"
+                Serial.write("00/idle")
+                speech = None
+                
+        elif category == "reminder":
+            if "what" in identifiers or "all" in identifiers or ("show" in identifiers and "all" in identifiers):
+                return_data = rm.view()
+                print(f"[REMIND] Number of Reminders: {len(return_data)}")
+                # for reminder in return_data:
+                #     payload = reminder.get("payload")
+                #     print(f"[REMIND] {payload}")
+            
+            elif "remind" in identifiers:
+                reminder_data = rm.op(identifiers, neutral_terms)
+                #reminder_data[1][0] is the first payload
+                #reminder_data[2] is the timing
+                rm.add(reminder_data[1][0], reminder_data[2])
+                print(f"[REMIND] {reminder_data[1][0]} | S:{reminder_data[2]}")
+                
+            elif "delete" in identifiers:
+                print(f"[REMIND] Deleting All Reminders")
+                rm.reset()
+                
+            else:
+                pass #add function to wait for user to say what reminder they want again
+            
+        elif category == "timetable":
+            timedata = datetime.datetime.now()
+            week_number = timedata.strftime("%W")
+            day = timedata.strftime("%A").lower()
+            
+            if (int(week_number)-starting_week_number)%2 == 0: #week is even
+                if "today" in neutral_terms:
+                    timetable = vjc.a_timetable(f"{day}") #no buffer for weekends
+                    print(day)
+                    #print(f"[TT] {timetable}")
+                
+                elif "tomorrow" in neutral_terms:
+                    day_2 = datetime.datetime(int(timedata.strftime("%Y")), int(timedata.strftime("%m")), int(timedata.strftime("%d")) + 1)
+                    day_2 = day_2.strftime("%A").lower()
+                    timetable = vjc.a_timetable(f"{day_2}")
+                    print(day_2)
+                    #print(f"[TT] {timetable}")
+                
+            else:
+                if "today" in neutral_terms:
+                    timetable = vjc.b_timetable(f"{day}") #no buffer for weekends
+                    print(day)
+                    #print(f"[TT] {timetable}")
+                
+                elif "tomorrow" in neutral_terms:
+                    day_2 = datetime.datetime(int(timedata.strftime("%Y")), int(timedata.strftime("%m")), int(timedata.strftime("%d")) + 1)
+                    day_2 = day_2.strftime("%A").lower()
+                    timetable = vjc.b_timetable(f"{day_2}")
+                    print(day_2)
+                    #print(f"[TT] {timetable}")
+                
         else: #so far, it is deactivated 
             print(Fore.RED + f"[TTA] Error! NoneType Category (Not a request)" + Fore.RESET)
             if sentence.find("sleep") != -1:
@@ -338,6 +346,7 @@ speech_detected = th.Event()
 def main():
     global speech
     global state
+    global no_speech_count
     
     #Clearing of the wakeword event if state is not sleep (change if needed later)
     if wakeEvent.is_set() == True and state != "sleep":
@@ -351,15 +360,23 @@ def main():
         if speech != None:
             print(f"[PYSST] {speech}")
             SST.stopRecording.clear()
-            
             speech = speech.lower()
+        
+            if speech.find("wake") >= 0:
+                state = "awake"
+                Serial.write("00/awake")
+                SST.stopRecording.clear()
+                
+            elif speech.find("sleep") >= 0:
+                state = "sleep"
+                Serial.write("00/sleep")
+                speech = None
+                
+            elif speech.find("sleep") >= 0 and speech.find("deep") >= 0:
+                state = "deepsleep"
+                Serial.write("00/deepsleep")
+                speech = None
             
-            #i just want to do this for fun
-            if speech.find("play") >= 0:
-                spotify.play()
-            
-            elif speech.find("pause") >= 0:
-                spotify.pause()
         else:
             SST.stopRecording.clear()
     
@@ -371,7 +388,7 @@ def main():
         face_x = 0
         face_y = 0
         
-        vid = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+        vid = cv2.VideoCapture(CAM_ID, cv2.CAP_DSHOW)
         vid.set(cv2.CAP_PROP_FRAME_WIDTH, WIDTH)
         vid.set(cv2.CAP_PROP_FRAME_HEIGHT, HEIGHT)
         
@@ -383,16 +400,27 @@ def main():
         while state == "awake": #while loop for repeat
             #see if listening thread had detected speech
             if speech_detected.is_set() == True:
-                speech_detected.clear()
-                
-                textToAction_thread = th.Thread(target=textToAction)
-                textToAction_thread.daemon = True
-                textToAction_thread.start()
+                if no_speech_count >= 1000:
+                    print(no_speech_count)
+                    state = "idle"
+                    Serial.write("00/idle")
+                    speech = None
+                    no_speech_count = 0
+                    
+                else:
+                    speech_detected.clear()
+                    no_speech_count = 0
+                    textToAction_thread = th.Thread(target=textToAction)
+                    textToAction_thread.daemon = True
+                    textToAction_thread.start()
                 
             elif (listening_thread.is_alive() == False) and (speech_detected.is_set()) == False:
                 listening_thread = th.Thread(target=listen)
                 listening_thread.daemon = True
                 listening_thread.start()
+                
+            else: 
+                no_speech_count += 1
             
             ret, frame = vid.read()
             if not ret:
@@ -432,7 +460,7 @@ def main():
 
                         prev_face_x = face_x
                         
-            #cv2.imshow('frame', frame)
+            cv2.imshow('frame', frame)
             key = cv2.waitKey(1) & 0xFF
 
             if key == ord("q") or key == ord("Q"):

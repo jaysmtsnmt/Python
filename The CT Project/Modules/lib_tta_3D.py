@@ -15,25 +15,23 @@ conversational_final = {}
 
 #X & Y Axis Dictionaries #Will base training off 30 examples
 n_xytrain_sentences = 40
-reminder_dictionary = {}
-room_dictionary = {}
+no_words_list = []
 music_dictionary = {}
-alarm_dictionary = {} #Only for alarm setting
-timer_dictionary = {} #
-calendar_dictionary = {}
-log_dictionary = {}
-command_dictionary = {} #CT-02 Specific Commands
-listofcats = ["reminder", "room", "music", "alarm", "timer", "calendar", "log", "command"]
-listofdicts = [reminder_dictionary, room_dictionary, music_dictionary, alarm_dictionary, timer_dictionary, calendar_dictionary, log_dictionary, command_dictionary]
+timetable_dictionary = {}
+reminder_dictionary = {}
+command_dictionary = {}
+listofcats = ["music", "timetable", "reminder", "command"]
+listofdicts = [music_dictionary, timetable_dictionary, reminder_dictionary, command_dictionary]
+angle_per_dictionary = 360/len(listofcats)
 
 '''
 Wake me up at 4.22 p.m.
 Wake me up at 6.15 a.m.
 '''
 
-common_words = {}
+common_words = {"me":0, "me my":0, "to":0, "i":0, "do":0, "to":0, "my":0}
 deletion_repetition = 1 #Delete trained word if only repeated once
-repeat_allowance = 3 #words are only allowed to be found in a maximum of 3 dictionaries
+repeat_allowance = 100 #words are only allowed to be found in a maximum of 3 dictionaries
 
 #Paths
 T_NEUTRAL = r"C:\Users\delay\OneDrive\Documents\Code & Programs\Visual Studio Code\Python\The CT Project\Modules\Text to Action\train_neutral.txt"
@@ -54,15 +52,20 @@ def train(loops = 1, cutoff_score = 6): #Number of training loops
         training_file = open(T_XY_TRAINING, "r", encoding="UTF-8")
         
         #Reading the training file
+        no_of_sentences = 0
         for sentence in training_file:
             sentence = sentence.lower()
             
             if sentence.find("///") != -1: #if this is a header line
+                if no_of_sentences != 0:
+                    no_words_list.append(no_of_sentences)
+                no_of_sentences = 0 #reset
                 sentence = sentence.replace("///", "")
                 print(Fore.YELLOW + f"[TTA] Dictionary Training: {sentence}" + Fore.RESET)
                 dictionary_number += 1
                 
             else:
+                no_of_sentences += 1
                 if dictionary_number != -1 and dictionary_number < n_dictionaries: #do not allow training to start if start header was not read or if dictionary number exceeds range
                     sentence = sentence.split()
                     
@@ -80,6 +83,7 @@ def train(loops = 1, cutoff_score = 6): #Number of training loops
                         if word != "a.m." and word != "p.m.":
                             #remove any punctuation from training data and replace with ""
                             for letter in word:
+
                                 if not (ord(letter) >= 97 and ord(letter) <= 122): 
                                     word = word.replace(letter, "")
                         
@@ -88,9 +92,13 @@ def train(loops = 1, cutoff_score = 6): #Number of training loops
                             listofdicts[dictionary_number][word] = listofdicts[dictionary_number][word] + 1
                             
                         else: #if it is not, create a new value for it
-                            listofdicts[dictionary_number][word] = 0                        
-                    
+                            listofdicts[dictionary_number][word] = 0    
+                            
+        no_words_list.append(no_of_sentences)                    
+                            
         training_file.close()
+        
+        print(no_words_list)
         
         for dictionary in listofdicts: #Repeat for all dictionaries
             temp_dict = dict(dictionary)
@@ -99,11 +107,14 @@ def train(loops = 1, cutoff_score = 6): #Number of training loops
                 if temp_dict.get(item) <= deletion_repetition:
                     dictionary.pop(item)
                     
+        i = 0
         for dictionary in listofdicts: #Repeat for all dictionaries
             print(Fore.YELLOW + "[TTA] Scaling Data..." + Fore.RESET)
             for item in dictionary:
-                dictionary[item] = dictionary[item]/n_xytrain_sentences
-
+                dictionary[item] = dictionary[item]/no_words_list[i]
+                
+            i +=1
+            
         #Save Dictionary Data
         n = 0
         for dictionary in listofdicts: #Repeat for all dictionaries
@@ -248,8 +259,13 @@ def vectCalcXY(sentence):
         if word != "a.m." and word != "p.m.":
             #remove any punctuation from training data and replace with ""
             for letter in word:
-                if not (ord(letter) >= 97 and ord(letter) <= 122): 
-                    word = word.replace(letter, "")
+                try: #is a number
+                   int(letter)
+                   
+                except ValueError: #a letter
+                # if not (ord(letter) <= 9):  #if it isnt a number, but is any other character 
+                    if not (ord(letter) >= 97 and ord(letter) <= 122): 
+                        word = word.replace(letter, "")
         
         #print(Fore.LIGHTCYAN_EX + f"[TTA] Calculating Vector for '{word}'" + Fore.RESET)
         angle = 0
@@ -274,10 +290,11 @@ def vectCalcXY(sentence):
         
         #Vector Calculation
         resultant_vector = addVectorList(vectors)
-        if (round(resultant_vector[1]/theta) * 45) == 360:
+        #print(dict_direction)
+        if (round(resultant_vector[1]/theta) * angle_per_dictionary) == 360:
             category = dict_direction.get(0)
         else:
-            category = dict_direction.get(round(resultant_vector[1]/theta) * 45)
+            category = dict_direction.get(round(resultant_vector[1]/theta) * angle_per_dictionary)
 
         #print(Fore.GREEN + f"[TTA] Word: {word} | M:{resultant_vector[0]} D:{resultant_vector[1]} | Cat: {category}" + Fore.RESET + "\n")
 
@@ -288,8 +305,10 @@ def vectCalcXY(sentence):
                 times_repeated += 1
         
         if times_repeated <= repeat_allowance:
-            sentence_vectors.append(resultant_vector)
-            keywords[word] = resultant_vector
+            if common_words.get(word) == None:
+                sentence_vectors.append(resultant_vector)
+                keywords[word] = resultant_vector
+                
         else: 
             #print(Fore.RED + f"[TTA] Disregarding '{word}' (Too Common!)" + Fore.RESET)
             pass
@@ -310,11 +329,11 @@ def vectCalcXY(sentence):
     
     #print(Fore.GREEN + f"[TTA] Resultant Vector: {resultant_vector}" + Fore.RESET)
     #print(dict_direction)
-    if (round(resultant_vector[1]/theta) * 45) == 360:
+    if (round(resultant_vector[1]/theta) * angle_per_dictionary) == 360:
         category = dict_direction.get(0)
         
     else:
-        category = dict_direction.get(round(resultant_vector[1]/theta) * 45)
+        category = dict_direction.get(round(resultant_vector[1]/theta) * angle_per_dictionary)
     
     print(Fore.GREEN + f"[TTA] Resultant Vector: {resultant_vector} | Category: {category}" + Fore.RESET)
     return category, keywords
@@ -366,10 +385,12 @@ def identifyKeywords(keywords): #keywords should be a dictionary with definition
 
     n_iteration = 0
     index_of_last_neutral = 0
+    #print(keywords)
     for keyword in keywords:
         n_iteration += 1
         if keywords[keyword][0] == 0: #if it does not have a magnitude
-            if n_iteration-index_of_last_neutral == 1 and index_of_last_neutral!=0: #if the previous word is also neutral (no magnitude)
+            if n_iteration-index_of_last_neutral == 1 and index_of_last_neutral!=0 and common_words.get(keyword) == None: #if the previous word is also neutral (no magnitude)
+                
                 combined = neutral_terms[-1] + " " + keyword #last word
                 neutral_terms.pop()
                 neutral_terms.append(combined)
@@ -384,7 +405,7 @@ def identifyKeywords(keywords): #keywords should be a dictionary with definition
             
     return identifiers, neutral_terms
             
-def process(sentence):
+def process(sentence): #category, sentence, identifiers, neutral_terms
     sentence = sentence.lower()
     #if vectCalcZ(sentence): #if it is a request
     if True: #request needs much more training :/
@@ -396,4 +417,3 @@ def process(sentence):
     
     else: #if it is not a request
         return None, sentence, [], [] #returns as string
-    
